@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物品转移工具</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>游戏物品转移工具</h1>
+            <div class="auth-section">
+                <input type="text" id="token-input" placeholder="请输入授权令牌 (Bearer Token)">
+                <button id="load-btn">加载物品</button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="items-container">
+                <div class="column">
+                    <h2>储物箱</h2>
+                    <div class="search-box">
+                        <input type="text" id="stash-search" placeholder="搜索物品...">
+                    </div>
+                    <div class="items-list" id="stash-list">
+                        <div class="loading-message">请先输入授权令牌并加载物品</div>
+                    </div>
+                </div>
+                
+                <div class="transfer-controls">
+                    <button id="transfer-btn" disabled>转移 →</button>
+                    <div id="selected-item-info"></div>
+                </div>
+                
+                <div class="column">
+                    <h2>背包</h2>
+                    <div class="search-box">
+                        <input type="text" id="inventory-search" placeholder="搜索物品...">
+                    </div>
+                    <div class="items-list" id="inventory-list">
+                        <div class="loading-message">请先输入授权令牌并加载物品</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- 转移数量弹窗 -->
+        <div class="modal" id="transfer-modal">
+            <div class="modal-content">
+                <h3>转移物品</h3>
+                <p id="modal-item-name">物品：<span></span></p>
+                <p id="modal-item-amount">当前数量：<span></span></p>
+                <div class="modal-input">
+                    <label for="transfer-amount">转移数量：</label>
+                    <input type="number" id="transfer-amount" min="1" value="1">
+                </div>
+                <div class="modal-buttons">
+                    <button id="confirm-transfer-btn">确定</button>
+                    <button id="cancel-transfer-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
