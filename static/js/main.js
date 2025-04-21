@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 状态变量
     let allItems = { inventory: [], stash: [] };
     let itemDetails = {}; // 存储物品详细信息
-    let selectedItem = null;
+    let selectedItems = []; // 存储多选的物品
     let selectedItemList = null; // 'stash' 或 'inventory'
     let token = localStorage.getItem('auth_token') || '';
     let filterMode = 'all'; // 筛选模式：'all'、'new'
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchItemDetailsAsync();
             
             transferBtn.disabled = true;
-            selectedItem = null;
+            selectedItems = [];
             selectedItemInfo.textContent = '';
         } catch (error) {
             console.error('Error loading items:', error);
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 获取物品显示名称
     function getItemDisplayName(itemId, details) {
         if (isNewItem(itemId) && (!details || !details.name)) {
-            return "新版物品";
+            return "新版物品" + itemId;
         }
         return details && details.name ? details.name : itemId;
     }
@@ -297,6 +297,34 @@ document.addEventListener('DOMContentLoaded', () => {
             div.setAttribute('data-item-id', itemId);
             div.setAttribute('data-amount', item.amount);
 
+            // 添加复选框
+            const checkboxContainer = document.createElement('div');
+            checkboxContainer.className = 'item-checkbox';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    div.classList.add('selected');
+                } else {
+                    div.classList.remove('selected');
+                }
+                // 触发物品选择逻辑
+                selectItem(div, listType);
+            });
+            checkboxContainer.appendChild(checkbox);
+            div.appendChild(checkboxContainer);
+            
+            // 创建物品图片 (如果有)
+            if (details.image) {
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'item-image';
+                const img = document.createElement('img');
+                img.src = details.image;
+                img.alt = getItemDisplayName(itemId, details);
+                imgContainer.appendChild(img);
+                div.appendChild(imgContainer);
+            }
+
             // 创建物品信息容器
             const infoContainer = document.createElement('div');
             infoContainer.className = 'item-info';
@@ -313,17 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
             amountSpan.textContent = `x${item.amount}`;
             infoContainer.appendChild(amountSpan);
             
-            // 创建物品图片 (如果有)
-            if (details.image) {
-                const imgContainer = document.createElement('div');
-                imgContainer.className = 'item-image';
-                const img = document.createElement('img');
-                img.src = details.image;
-                img.alt = getItemDisplayName(itemId, details);
-                imgContainer.appendChild(img);
-                div.appendChild(imgContainer);
-            }
-
             div.appendChild(infoContainer);
             div.addEventListener('click', () => selectItem(div, listType));
 
@@ -345,90 +362,290 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 选择物品
     function selectItem(element, listType) {
-        // 移除之前选中项的高亮
-        document.querySelectorAll('.item.selected').forEach(el => {
-            el.classList.remove('selected');
-        });
-
-        // 高亮当前选中项
-        element.classList.add('selected');
-
-        // 保存选中的物品信息
-        const itemId = element.getAttribute('data-item-id');
-        const details = itemDetails[itemId] || {};
+        // 当点击的是复选框时，不需要处理
+        if (event.target.type === 'checkbox') {
+            const checkbox = event.target;
+            const itemId = element.getAttribute('data-item-id');
+            const id = element.getAttribute('data-id');
+            const details = itemDetails[itemId] || {};
+            const amount = parseInt(element.getAttribute('data-amount'), 10);
+            
+            if (checkbox.checked) {
+                // 添加到选中列表
+                const existingIndex = selectedItems.findIndex(item => item.id === id);
+                if (existingIndex === -1) {
+                    selectedItems.push({
+                        id: id,
+                        itemId: itemId,
+                        name: getItemDisplayName(itemId, details),
+                        amount: amount
+                    });
+                }
+                element.classList.add('selected');
+            } else {
+                // 从选中列表中删除
+                selectedItems = selectedItems.filter(item => item.id !== id);
+                element.classList.remove('selected');
+            }
+            
+            // 所有选中的物品必须来自同一个列表
+            if (selectedItems.length > 0) {
+                // 如果有选中的项目并且不是当前列表，取消选择
+                if (selectedItemList && selectedItemList !== listType) {
+                    // 清空之前列表的选择
+                    document.querySelectorAll(`.item[data-list="${selectedItemList}"] input[type="checkbox"]`).forEach(cb => {
+                        cb.checked = false;
+                    });
+                    document.querySelectorAll(`.item[data-list="${selectedItemList}"]`).forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    selectedItems = selectedItems.filter(item => {
+                        // 只保留当前列表的物品
+                        const itemElement = document.querySelector(`.item[data-id="${item.id}"]`);
+                        return itemElement && itemElement.getAttribute('data-list') === listType;
+                    });
+                }
+                selectedItemList = listType;
+            } else {
+                selectedItemList = null;
+            }
+            
+            updateSelectedItemsInfo();
+            return;
+        }
         
-        selectedItem = {
-            id: element.getAttribute('data-id'),
-            itemId: itemId,
-            name: getItemDisplayName(itemId, details),
-            amount: parseInt(element.getAttribute('data-amount'), 10)
-        };
-        selectedItemList = listType;
-
-        // 显示选中物品信息
-        selectedItemInfo.textContent = `已选择: ${selectedItem.name} (x${selectedItem.amount})`;
+        // 如果点击的是物品行（不是复选框），切换复选框状态
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            // 触发一个 change 事件
+            const changeEvent = new Event('change');
+            checkbox.dispatchEvent(changeEvent);
+        }
+    }
+    
+    // 更新选中物品信息显示
+    function updateSelectedItemsInfo() {
+        if (selectedItems.length === 0) {
+            selectedItemInfo.textContent = '';
+            transferBtn.disabled = true;
+            return;
+        }
+        
+        if (selectedItems.length === 1) {
+            const item = selectedItems[0];
+            selectedItemInfo.textContent = `已选择: ${item.name} (x${item.amount})`;
+        } else {
+            selectedItemInfo.textContent = `已选择: ${selectedItems.length} 个物品`;
+        }
+        
         transferBtn.disabled = false;
     }
 
     // 转移按钮点击事件
     transferBtn.addEventListener('click', () => {
-        if (!selectedItem) return;
+        if (selectedItems.length === 0) return;
 
-        // 设置模态框内容
-        modalItemName.textContent = selectedItem.name;
-        modalItemAmount.textContent = selectedItem.amount;
-        transferAmount.max = selectedItem.amount;
-        transferAmount.value = 1;
+        if (selectedItems.length === 1) {
+            // 单个物品转移
+            const item = selectedItems[0];
+            
+            // 显示单个物品转移界面
+            document.getElementById('single-item-transfer').style.display = 'block';
+            document.getElementById('batch-items-transfer').style.display = 'none';
+            
+            modalItemName.textContent = item.name;
+            modalItemAmount.textContent = item.amount;
+            transferAmount.max = item.amount;
+            transferAmount.value = item.amount; // 默认使用最大值
+        } else {
+            // 多个物品转移
+            // 隐藏单个物品界面，显示批量转移界面
+            document.getElementById('single-item-transfer').style.display = 'none';
+            document.getElementById('batch-items-transfer').style.display = 'block';
+            
+            const batchItemsList = document.getElementById('batch-items-list');
+            batchItemsList.innerHTML = '';
+            
+            // 为每个选中的物品创建一个带数量输入框的行
+            selectedItems.forEach(item => {
+                const itemRow = document.createElement('div');
+                itemRow.className = 'batch-item';
+                itemRow.setAttribute('data-id', item.id);
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'batch-item-name';
+                nameSpan.textContent = item.name;
+                
+                const amountContainer = document.createElement('div');
+                amountContainer.className = 'batch-item-amount';
+                
+                const amountLabel = document.createElement('span');
+                amountLabel.textContent = `数量(最大${item.amount}):`;
+                
+                const amountInput = document.createElement('input');
+                amountInput.type = 'number';
+                amountInput.min = '1';
+                amountInput.max = item.amount;
+                amountInput.value = item.amount; // 默认使用最大值
+                
+                amountContainer.appendChild(amountLabel);
+                amountContainer.appendChild(amountInput);
+                
+                itemRow.appendChild(nameSpan);
+                itemRow.appendChild(amountContainer);
+                
+                batchItemsList.appendChild(itemRow);
+            });
+        }
 
         // 显示模态框
         transferModal.style.display = 'block';
     });
-
+    
     // 确认转移
     confirmTransferBtn.addEventListener('click', async () => {
-        const amount = parseInt(transferAmount.value, 10);
-        if (isNaN(amount) || amount <= 0 || amount > selectedItem.amount) {
-            alert('请输入有效的转移数量');
-            return;
-        }
-
-        // 准备转移请求数据
-        const transferData = {
-            token,
-            id: selectedItem.id,
-            amount,
-            slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
-        };
-
-        try {
-            const response = await fetch('/api/move_item', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(transferData)
-            });
-
-            if (!response.ok) {
-                throw new Error('转移失败');
+        if (selectedItems.length === 0) return;
+        
+        const transferBatch = async () => {
+            let successCount = 0;
+            let totalCount = selectedItems.length;
+            
+            // 创建加载指示器
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = `批量转移中... (0/${totalCount})`;
+            document.body.appendChild(loadingIndicator);
+            
+            // 获取批量转移中每个物品的数量
+            const batchItemsList = document.getElementById('batch-items-list');
+            const batchItems = batchItemsList.querySelectorAll('.batch-item');
+            
+            for (let i = 0; i < batchItems.length; i++) {
+                const batchItem = batchItems[i];
+                const itemId = batchItem.getAttribute('data-id');
+                const item = selectedItems.find(item => item.id === itemId);
+                
+                if (!item) continue;
+                
+                const amountInput = batchItem.querySelector('input[type="number"]');
+                const amount = parseInt(amountInput.value, 10);
+                
+                if (isNaN(amount) || amount <= 0 || amount > item.amount) {
+                    continue; // 跳过无效数量
+                }
+                
+                // 准备转移请求数据
+                const transferData = {
+                    token,
+                    id: item.id,
+                    amount: amount,
+                    slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
+                };
+                
+                try {
+                    const response = await fetch('/api/move_item', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(transferData)
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    }
+                    
+                    // 更新进度
+                    loadingIndicator.textContent = `批量转移中... (${successCount}/${totalCount})`;
+                } catch (error) {
+                    console.error('Error transferring item:', error);
+                }
             }
-
-            // 关闭模态框
+            
+            // 完成后移除加载指示器
+            loadingIndicator.remove();
+            return successCount;
+        };
+        
+        if (selectedItems.length === 1) {
+            // 单个物品转移逻辑
+            const item = selectedItems[0];
+            const amount = parseInt(transferAmount.value, 10);
+            if (isNaN(amount) || amount <= 0 || amount > item.amount) {
+                alert('请输入有效的转移数量');
+                return;
+            }
+            
+            // 准备转移请求数据
+            const transferData = {
+                token,
+                id: item.id,
+                amount,
+                slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
+            };
+            
+            try {
+                const response = await fetch('/api/move_item', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(transferData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('转移失败');
+                }
+                
+                // 关闭模态框
+                transferModal.style.display = 'none';
+                
+                // 重新加载物品列表
+                await reloadItems();
+                
+                // 清空选择
+                clearSelections();
+            } catch (error) {
+                console.error('Error transferring item:', error);
+                alert('转移失败，请重试');
+            }
+        } else {
+            // 批量转移逻辑
             transferModal.style.display = 'none';
-
-            // 重新加载物品列表
-            await reloadItems();
             
-            selectedItem = null;
-            selectedItemList = null;
-            selectedItemInfo.textContent = '';
-            transferBtn.disabled = true;
+            const successCount = await transferBatch();
             
-        } catch (error) {
-            console.error('Error transferring item:', error);
-            alert('转移失败，请重试');
+            if (successCount > 0) {
+                // 重新加载物品列表
+                await reloadItems();
+                alert(`成功转移 ${successCount}/${selectedItems.length} 个物品`);
+            } else {
+                alert('批量转移失败，请重试');
+            }
+            
+            // 清空选择
+            clearSelections();
         }
     });
+    
+    // 清空所有选择
+    function clearSelections() {
+        // 取消所有复选框的选中状态
+        document.querySelectorAll('.item input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+        
+        // 移除所有选中样式
+        document.querySelectorAll('.item.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        selectedItems = [];
+        selectedItemList = null;
+        selectedItemInfo.textContent = '';
+        transferBtn.disabled = true;
+    }
 
     // 获取下一个可用的背包槽位
     function getNextAvailableSlot() {

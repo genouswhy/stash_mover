@@ -15,6 +15,8 @@ def index():
 
 @app.route('/api/get_items', methods=['POST'])
 def get_items():
+    if not request.is_json:
+        return jsonify({"error": "JSON data is required"}), 400
     token = request.json.get('token')
     if not token:
         return jsonify({"error": "Authorization token is required"}), 400
@@ -82,6 +84,8 @@ def get_item_details(item_id):
 
 @app.route('/api/move_item', methods=['POST'])
 def move_item():
+    if not request.is_json:
+        return jsonify({"error": "JSON data is required"}), 400
     data = request.json
     token = data.get('token')
     item_id = data.get('id')

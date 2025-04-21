@@ -36,6 +36,17 @@ header h1 {
     margin-bottom: 20px;
 }
 
+.usage-tips {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.usage-tips p {
+    color: #666;
+    font-size: 14px;
+    font-style: italic;
+}
+
 #token-input {
     width: 350px;
     padding: 10px;
@@ -125,12 +136,17 @@ header h1 {
     gap: 10px;
 }
 
+.item-checkbox {
+    min-width: 20px;
+}
+
 .item:hover {
     background-color: #f9f9f9;
 }
 
 .item.selected {
     background-color: #e3f2fd;
+    border-left: 3px solid #2196F3;
 }
 
 .item.new-item {
@@ -143,6 +159,7 @@ header h1 {
 
 .item.new-item.selected {
     background-color: #d0f0e0;
+    border-left: 3px solid #4CAF50;
 }
 
 .item-image {
@@ -306,4 +323,38 @@ button:hover {
 
 #cancel-transfer-btn:hover {
     background-color: #c0392b;
+}
+
+/* 批量转移模态框 */
+.batch-items-container {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 15px 0;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.batch-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.batch-item-name {
+    flex: 1;
+    font-weight: bold;
+}
+
+.batch-item-amount {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.batch-item-amount input {
+    width: 70px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 } 

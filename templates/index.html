@@ -14,6 +14,9 @@
                 <input type="text" id="token-input" placeholder="请输入授权令牌 (Bearer Token)">
                 <button id="load-btn">加载物品</button>
             </div>
+            <div class="usage-tips">
+                <p>提示: 勾选物品复选框可多选物品，支持批量转移</p>
+            </div>
         </header>
         
         <main>
@@ -49,11 +52,17 @@
         <div class="modal" id="transfer-modal">
             <div class="modal-content">
                 <h3>转移物品</h3>
-                <p id="modal-item-name">物品：<span></span></p>
-                <p id="modal-item-amount">当前数量：<span></span></p>
-                <div class="modal-input">
-                    <label for="transfer-amount">转移数量：</label>
-                    <input type="number" id="transfer-amount" min="1" value="1">
+                <div id="single-item-transfer">
+                    <p id="modal-item-name">物品：<span></span></p>
+                    <p id="modal-item-amount">当前数量：<span></span></p>
+                    <div class="modal-input">
+                        <label for="transfer-amount">转移数量：</label>
+                        <input type="number" id="transfer-amount" min="1" value="1">
+                    </div>
+                </div>
+                <div id="batch-items-transfer" style="display:none;">
+                    <p>批量转移以下物品：</p>
+                    <div class="batch-items-container" id="batch-items-list"></div>
                 </div>
                 <div class="modal-buttons">
                     <button id="confirm-transfer-btn">确定</button>
