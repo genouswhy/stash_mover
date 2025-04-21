@@ -15,24 +15,31 @@ def index():
 
 @app.route('/api/get_items', methods=['POST'])
 def get_items():
-    if not request.is_json:
-        return jsonify({"error": "JSON data is required"}), 400
-    token = request.json.get('token')
-    if not token:
-        return jsonify({"error": "Authorization token is required"}), 400
-    
-    headers = {
-        "X-PLATFORM": "WebGLPlayer",
-        "Authorization": f"Bearer {token}",
-        "sec-ch-ua-platform": "\"Windows\"",
-        "Referer": "https://play.zee-verse.com/",
-        "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
-        "sec-ch-ua-mobile": "?0",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-        "content-type": "application/json"
-    }
-    
     try:
+        # Check for JSON data
+        content_type = request.headers.get('Content-Type', '')
+        if 'application/json' not in content_type:
+            return jsonify({"error": "JSON data with Content-Type: application/json is required"}), 400
+            
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"error": "Invalid JSON data"}), 400
+            
+        token = data.get('token')
+        if not token:
+            return jsonify({"error": "Authorization token is required"}), 400
+        
+        headers = {
+            "X-PLATFORM": "WebGLPlayer",
+            "Authorization": f"Bearer {token}",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "Referer": "https://play.zee-verse.com/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
+            "sec-ch-ua-mobile": "?0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+            "content-type": "application/json"
+        }
+        
         response = requests.get(f"{API_URL}/account/assets", headers=headers)
         response.raise_for_status()
         data = response.json()
@@ -84,39 +91,45 @@ def get_item_details(item_id):
 
 @app.route('/api/move_item', methods=['POST'])
 def move_item():
-    if not request.is_json:
-        return jsonify({"error": "JSON data is required"}), 400
-    data = request.json
-    token = data.get('token')
-    item_id = data.get('id')
-    amount = data.get('amount')
-    slot = data.get('slot')
-    
-    if not all([token, item_id, amount]):
-        return jsonify({"error": "Missing required parameters"}), 400
-    
-    headers = {
-        "X-PLATFORM": "WebGLPlayer",
-        "Authorization": f"Bearer {token}",
-        "sec-ch-ua-platform": "\"Windows\"",
-        "Referer": "https://play.zee-verse.com/",
-        "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
-        "sec-ch-ua-mobile": "?0",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-        "content-type": "application/json"
-    }
-    
-    payload = {
-        "items": [
-            {
-                "id": item_id,
-                "amount": amount,
-                "slot": slot
-            }
-        ]
-    }
-    
     try:
+        # Check for JSON data
+        content_type = request.headers.get('Content-Type', '')
+        if 'application/json' not in content_type:
+            return jsonify({"error": "JSON data with Content-Type: application/json is required"}), 400
+            
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"error": "Invalid JSON data"}), 400
+            
+        token = data.get('token')
+        item_id = data.get('id')
+        amount = data.get('amount')
+        slot = data.get('slot')
+        
+        if not all([token, item_id, amount]):
+            return jsonify({"error": "Missing required parameters"}), 400
+        
+        headers = {
+            "X-PLATFORM": "WebGLPlayer",
+            "Authorization": f"Bearer {token}",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "Referer": "https://play.zee-verse.com/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
+            "sec-ch-ua-mobile": "?0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+            "content-type": "application/json"
+        }
+        
+        payload = {
+            "items": [
+                {
+                    "id": item_id,
+                    "amount": amount,
+                    "slot": slot
+                }
+            ]
+        }
+        
         response = requests.post(f"{API_URL}/account/inventory/move", headers=headers, json=payload)
         response.raise_for_status()
         return jsonify(response.json())
