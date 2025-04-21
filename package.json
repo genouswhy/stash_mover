@@ -1,0 +1,12 @@
+{
+  "name": "stash-mover",
+  "version": "1.0.0",
+  "description": "A tool for transferring items between inventory and stash in games",
+  "main": "api/index.py",
+  "scripts": {
+    "start": "python app.py"
+  },
+  "engines": {
+    "node": ">=14.x"
+  }
+} 

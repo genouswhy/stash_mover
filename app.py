@@ -123,5 +123,9 @@ def move_item():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Exposing the app object for Vercel
+app.debug = False
+
+# Entry point for Vercel
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(host='0.0.0.0', port=8080) 
