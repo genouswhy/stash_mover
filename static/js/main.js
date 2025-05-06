@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalItemName.textContent = item.name;
             modalItemAmount.textContent = item.amount;
             transferAmount.max = item.amount;
-            transferAmount.value = item.amount; // 默认使用最大值
+            transferAmount.value = 1; // 默认值改为1
         } else {
             // 多个物品转移
             // 隐藏单个物品界面，显示批量转移界面
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 amountInput.type = 'number';
                 amountInput.min = '1';
                 amountInput.max = item.amount;
-                amountInput.value = item.amount; // 默认使用最大值
+                amountInput.value = 1; // 默认值改为1
                 
                 amountContainer.appendChild(amountLabel);
                 amountContainer.appendChild(amountInput);
@@ -535,31 +535,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     continue; // 跳过无效数量
                 }
                 
-                // 准备转移请求数据
-                const transferData = {
-                    token,
-                    id: item.id,
-                    amount: amount,
-                    slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
-                };
-                
-                try {
-                    const response = await fetch('/api/move_item', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(transferData)
-                    });
+                // 循环调用接口，每次转移1个
+                let itemSuccessCount = 0;
+                for (let j = 0; j < amount; j++) {
+                    // 准备转移请求数据
+                    const transferData = {
+                        token,
+                        id: item.id,
+                        amount: 1, // 每次只转移1个
+                        slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
+                    };
                     
-                    if (response.ok) {
-                        successCount++;
+                    try {
+                        const response = await fetch('/api/move_item', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(transferData)
+                        });
+                        
+                        if (response.ok) {
+                            itemSuccessCount++;
+                        }
+                        
+                        // 更新进度
+                        loadingIndicator.textContent = `批量转移中... 物品 ${i+1}/${totalCount}, 当前物品进度: ${j+1}/${amount}`;
+                    } catch (error) {
+                        console.error('Error transferring item:', error);
                     }
-                    
-                    // 更新进度
-                    loadingIndicator.textContent = `批量转移中... (${successCount}/${totalCount})`;
-                } catch (error) {
-                    console.error('Error transferring item:', error);
+                }
+                
+                if (itemSuccessCount > 0) {
+                    successCount++;
                 }
             }
             
@@ -577,38 +585,73 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // 准备转移请求数据
-            const transferData = {
-                token,
-                id: item.id,
-                amount,
-                slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
-            };
+            // 显示加载指示器
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.textContent = `物品转移中... (0/${amount})`;
+            document.body.appendChild(loadingIndicator);
             
-            try {
-                const response = await fetch('/api/move_item', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(transferData)
-                });
+            let successCount = 0;
+            
+            // 循环调用接口，每次转移1个
+            for (let i = 0; i < amount; i++) {
+                // 准备转移请求数据
+                const transferData = {
+                    token,
+                    id: item.id,
+                    amount: 1, // 每次只转移1个
+                    slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
+                };
                 
-                if (!response.ok) {
-                    throw new Error('转移失败');
+                try {
+                    const response = await fetch('/api/move_item', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(transferData)
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                        // 更新进度
+                        loadingIndicator.textContent = `物品转移中... (${successCount}/${amount})`;
+                    } else {
+                        throw new Error('转移失败');
+                    }
+                } catch (error) {
+                    console.error('Error transferring item:', error);
+                    loadingIndicator.remove();
+                    alert(`转移进度: ${successCount}/${amount}, 请重试剩余数量`);
+                    
+                    // 关闭模态框
+                    transferModal.style.display = 'none';
+                    
+                    // 重新加载物品列表
+                    await reloadItems();
+                    
+                    // 清空选择
+                    clearSelections();
+                    return;
                 }
-                
-                // 关闭模态框
-                transferModal.style.display = 'none';
-                
-                // 重新加载物品列表
-                await reloadItems();
-                
-                // 清空选择
-                clearSelections();
-            } catch (error) {
-                console.error('Error transferring item:', error);
-                alert('转移失败，请重试');
+            }
+            
+            // 移除加载指示器
+            loadingIndicator.remove();
+            
+            // 关闭模态框
+            transferModal.style.display = 'none';
+            
+            // 重新加载物品列表
+            await reloadItems();
+            
+            // 清空选择
+            clearSelections();
+            
+            if (successCount === amount) {
+                alert('物品转移成功');
+            } else {
+                alert(`成功转移 ${successCount}/${amount} 个物品`);
             }
         } else {
             // 批量转移逻辑
