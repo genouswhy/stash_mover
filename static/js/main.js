@@ -517,6 +517,9 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingIndicator.textContent = `批量转移中... (0/${totalCount})`;
             document.body.appendChild(loadingIndicator);
             
+            // 手动跟踪已经分配的槽位
+            const assignedSlots = new Set();
+            
             // 获取批量转移中每个物品的数量
             const batchItemsList = document.getElementById('batch-items-list');
             const batchItems = batchItemsList.querySelectorAll('.batch-item');
@@ -538,12 +541,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 循环调用接口，每次转移1个
                 let itemSuccessCount = 0;
                 for (let j = 0; j < amount; j++) {
+                    // 获取下一个可用槽位，避开已分配的槽位
+                    let nextSlot = null;
+                    if (selectedItemList === 'stash') {
+                        nextSlot = getNextAvailableSlot(assignedSlots);
+                        if (nextSlot) {
+                            assignedSlots.add(nextSlot);
+                        }
+                    }
+                    
                     // 准备转移请求数据
                     const transferData = {
                         token,
                         id: item.id,
                         amount: 1, // 每次只转移1个
-                        slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
+                        slot: nextSlot
                     };
                     
                     try {
@@ -592,15 +604,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(loadingIndicator);
             
             let successCount = 0;
+            // 手动跟踪已经分配的槽位
+            const assignedSlots = new Set();
             
             // 循环调用接口，每次转移1个
             for (let i = 0; i < amount; i++) {
+                // 获取下一个可用槽位，避开已分配的槽位
+                let nextSlot = null;
+                if (selectedItemList === 'stash') {
+                    nextSlot = getNextAvailableSlot(assignedSlots);
+                    if (nextSlot) {
+                        assignedSlots.add(nextSlot);
+                    }
+                }
+                
                 // 准备转移请求数据
                 const transferData = {
                     token,
                     id: item.id,
                     amount: 1, // 每次只转移1个
-                    slot: selectedItemList === 'stash' ? getNextAvailableSlot() : null
+                    slot: nextSlot
                 };
                 
                 try {
@@ -683,12 +706,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 获取下一个可用的背包槽位
-    function getNextAvailableSlot() {
+    function getNextAvailableSlot(additionalUsedSlots = new Set()) {
         const usedSlots = new Set();
         allItems.inventory.forEach(item => {
             if (item.slot) {
                 usedSlots.add(item.slot);
             }
+        });
+        
+        // 添加已手动分配的槽位
+        additionalUsedSlots.forEach(slot => {
+            usedSlots.add(slot);
         });
 
         // 寻找10-20范围内的可用槽位
