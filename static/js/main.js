@@ -617,22 +617,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 更新进度
                         loadingIndicator.textContent = `物品转移中... (${successCount}/${amount})`;
                     } else {
-                        throw new Error('转移失败');
+                        console.error('API返回错误:', response.status);
+                        // 不中断循环，继续尝试下一个
                     }
                 } catch (error) {
                     console.error('Error transferring item:', error);
-                    loadingIndicator.remove();
-                    alert(`转移进度: ${successCount}/${amount}, 请重试剩余数量`);
-                    
-                    // 关闭模态框
-                    transferModal.style.display = 'none';
-                    
-                    // 重新加载物品列表
-                    await reloadItems();
-                    
-                    // 清空选择
-                    clearSelections();
-                    return;
+                    // 不中断循环，继续尝试下一个
                 }
             }
             
@@ -648,10 +638,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // 清空选择
             clearSelections();
             
-            if (successCount === amount) {
-                alert('物品转移成功');
+            if (successCount === 0) {
+                alert('物品转移失败，请重试');
+            } else if (successCount < amount) {
+                alert(`部分转移成功：${successCount}/${amount}，请重试剩余数量`);
             } else {
-                alert(`成功转移 ${successCount}/${amount} 个物品`);
+                alert('物品转移成功');
             }
         } else {
             // 批量转移逻辑
